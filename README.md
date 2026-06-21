@@ -19,7 +19,12 @@ Juego de trivia de fútbol con estructura de torneo. 5 fases, 3 vidas, 25 pregun
 git clone https://github.com/tu-usuario/TriviaMundial.git
 cd TriviaMundial
 
-# 2. (Opcional) Instalar Pillow para mejor renderizado de imágenes
+# 2. Crear y activar el entorno virtual
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS / Linux
+
+# 3. (Opcional) Instalar Pillow para mejor renderizado de imágenes
 pip install pillow
 ```
 
