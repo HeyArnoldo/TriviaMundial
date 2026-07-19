@@ -1,8 +1,0 @@
-SIMULACIÓN - MUNDIAL TRIVIA CHALLENGE
-Partidas ejecutadas: 10
-Puntaje promedio: 104.50
-Puntaje máximo: 175
-Puntaje mínimo: 20
-Desviación estándar: 43.27
-Victorias: 0
-Derrotas: 10

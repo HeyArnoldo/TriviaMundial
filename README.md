@@ -1,53 +1,76 @@
-# ⚽ Mundial Trivia Challenge
+# Mundial Trivia Challenge
 
-Juego de trivia de fútbol con estructura de torneo. 5 fases, 3 vidas, 25 preguntas, imágenes de jugadores y escudos.
+Aplicación de escritorio desarrollada en Python y Tkinter. Presenta una trivia de
+fútbol con 50 preguntas, cinco fases de dificultad progresiva, tres vidas,
+analítica de resultados y simulaciones reproducibles.
 
-**Proyecto Final · Programación de Computadoras · Universidad Tecnológica del Perú · 2026**
+## Inicio rápido
 
----
+Requisitos:
 
-## Requisitos
-
-- Python 3.11+
-- Tkinter (viene incluido con Python en Windows)
-- Pillow *(opcional — mejora la calidad de las imágenes)*
-- NumPy y Matplotlib
-
-## Instalación
+- Python 3.11 o superior.
+- Tkinter, incluido normalmente con Python en Windows.
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/tu-usuario/TriviaMundial.git
-cd TriviaMundial
-
-# 2. Crear y activar el entorno virtual
 python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS / Linux
-
-# 3. Instalar las dependencias
-pip install -r requirements.txt
-```
-
-> Sin Pillow el juego igual corre — las imágenes se muestran con el módulo estándar `tkinter.PhotoImage`.
-
-## Ejecutar
-
-```bash
+venv\Scripts\activate
+python -m pip install -r requirements.txt
 python mundial_trivia/main.py
 ```
 
-## Analítica y simulación
+En macOS o Linux, activa el entorno con `source venv/bin/activate`. Si Tkinter no
+está incluido en tu distribución, instálalo desde el gestor de paquetes del
+sistema operativo.
 
-Cada partida genera una matriz NumPy, un reporte y cuatro gráficos en
-`resultados/ultima_partida/`. Para ejecutar una simulación reproducible:
+## Funcionalidades
+
+- Banco validado de 50 preguntas sobre jugadores, selecciones, goles y datos.
+- Cinco fases con puntajes y dificultades progresivas.
+- Interfaz gráfica con retroalimentación inmediata y recursos visuales.
+- Ranking de la sesión y opción para jugar nuevamente.
+- Registro de respuestas, puntaje, vidas y tiempo empleado.
+- Procesamiento de resultados mediante matrices NumPy.
+- Clasificación automática del rendimiento.
+- Exportación de archivos CSV, reportes de texto y gráficos con Matplotlib.
+- Simulación de partidas con una semilla configurable.
+
+## Reglas
+
+| Fase | Puntos por acierto | Dificultad |
+|---|---:|---|
+| Fase de Grupos | 10 | Fácil |
+| Octavos de Final | 15 | Fácil |
+| Cuartos de Final | 20 | Media |
+| Semifinal | 30 | Media |
+| Final | 50 | Difícil |
+
+Cada fase contiene cinco preguntas. Una respuesta incorrecta elimina una vida;
+la partida termina al perder las tres vidas o al completar la final.
+
+## Analítica
+
+Al finalizar una partida, el programa crea `resultados/ultima_partida/` con:
+
+- El historial de respuestas en CSV.
+- La matriz numérica procesada con NumPy.
+- Un resumen textual del rendimiento.
+- Cuatro gráficos sobre aciertos, fases, categorías y evolución del puntaje.
+
+Estos archivos son resultados de ejecución y no forman parte del código fuente
+versionado.
+
+## Simulación
+
+Ejecuta partidas automáticas indicando la cantidad, la semilla y, opcionalmente,
+el directorio de salida:
 
 ```bash
 python mundial_trivia/simulador.py --partidas 10 --semilla 42
+python mundial_trivia/simulador.py --partidas 100 --semilla 7 --salida resultados/simulacion
 ```
 
-La muestra de 10 partidas es la utilizada por el informe y la presentación. Puedes
-cambiar `--partidas` para realizar experimentos adicionales.
+Usar la misma configuración produce los mismos puntajes, lo que permite repetir
+y comparar experimentos.
 
 ## Pruebas
 
@@ -55,59 +78,24 @@ cambiar `--partidas` para realizar experimentos adicionales.
 python -m unittest discover -s tests -v
 ```
 
-## Informe APA 7
+Las pruebas cubren la lógica del juego, el procesamiento analítico, la generación
+de archivos y la reproducibilidad de las simulaciones.
 
-El informe se compila exclusivamente con Docker:
+## Estructura
 
-```bash
-docker compose run --rm latex
-docker compose run --rm word
-```
-
-Los documentos se crean en `entregables/`. Consulta `docs/informe/README.md`
-para el flujo completo.
-
----
-
-## Cómo se juega
-
-| Fase | Puntos por acierto | Dificultad |
-|---|---|---|
-| Fase de Grupos | 10 pts | Fácil |
-| Octavos de Final | 15 pts | Fácil |
-| Cuartos de Final | 20 pts | Medio |
-| Semifinal | 30 pts | Medio |
-| Final | 50 pts | Difícil |
-
-- **3 vidas** — no se recuperan entre fases.
-- **5 preguntas por fase** — sin repetición entre fases.
-- **Acierto** → suma puntos. **Fallo** → pierde una vida.
-- **0 vidas** → Game Over con tu puntaje.
-- **Superar las 5 fases** → Salón de la Fama 🏆
-
----
-
-## Estructura del proyecto
-
-```
+```text
 mundial_trivia/
-├── main.py          # Punto de entrada → ejecutar esto
-├── config.py        # Constantes: colores, fuentes, fases, puntajes
-├── preguntas.py     # Base de 50 preguntas (lista de dicts, opciones en tuplas)
-├── juego.py         # Lógica pura del juego (sin GUI)
-├── interfaz.py      # GUI completa en Tkinter (5 pantallas)
-└── assets/
-    ├── jugadores/   # Fotos de jugadores (PNG)
-    ├── escudos/     # Logos de selecciones (PNG)
-    └── goles/       # Fotos de protagonistas de goles históricos (PNG)
+|-- main.py          # Punto de entrada
+|-- config.py        # Reglas y configuración visual
+|-- preguntas.py     # Banco de preguntas
+|-- juego.py         # Lógica del dominio sin interfaz gráfica
+|-- interfaz.py      # Interfaz de escritorio con Tkinter
+|-- analitica.py     # Procesamiento NumPy y gráficos
+|-- simulador.py     # Simulación reproducible de partidas
+`-- assets/          # Imágenes utilizadas por las preguntas
+
+tests/
+|-- test_juego.py
+|-- test_analitica.py
+`-- test_simulador.py
 ```
-
----
-
-## Integrantes
-
-| Nombre | Código |
-|---|---|
-| Mamani Aguilar, Luis Enrique | U23259985 |
-| Cortez Benites, Eduardo Franco | U1421099 |
-| Gallardo Villa, Paul Williams | U1614474 |

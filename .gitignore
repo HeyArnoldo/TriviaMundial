@@ -30,5 +30,8 @@ desktop.ini
 # Logs
 *.log
 
+# Runtime output
+resultados/
+
 # Temp / scripts de un solo uso
 download_assets.py
