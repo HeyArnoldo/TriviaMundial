@@ -1,6 +1,6 @@
 # 🏆 Mundial Trivia Challenge — Plan de Proyecto
 
-> Proyecto Final · Programación de Computadoras (100000I42M) · UTP · 2026 Ciclo 1 Marzo
+> Proyecto Final · Programación de Computadoras (100000I42M) · Universidad Tecnológica del Perú · 2026 Ciclo 1 Marzo
 
 **Integrantes:**
 - Mamani Aguilar, Luis Enrique — U23259985

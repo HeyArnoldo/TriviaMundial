@@ -2,15 +2,16 @@
 
 Juego de trivia de fútbol con estructura de torneo. 5 fases, 3 vidas, 25 preguntas, imágenes de jugadores y escudos.
 
-**Proyecto Final · Programación de Computadoras · UTP 2026**
+**Proyecto Final · Programación de Computadoras · Universidad Tecnológica del Perú · 2026**
 
 ---
 
 ## Requisitos
 
-- Python 3.8+
+- Python 3.11+
 - Tkinter (viene incluido con Python en Windows)
 - Pillow *(opcional — mejora la calidad de las imágenes)*
+- NumPy y Matplotlib
 
 ## Instalación
 
@@ -24,8 +25,8 @@ python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS / Linux
 
-# 3. (Opcional) Instalar Pillow para mejor renderizado de imágenes
-pip install pillow
+# 3. Instalar las dependencias
+pip install -r requirements.txt
 ```
 
 > Sin Pillow el juego igual corre — las imágenes se muestran con el módulo estándar `tkinter.PhotoImage`.
@@ -35,6 +36,36 @@ pip install pillow
 ```bash
 python mundial_trivia/main.py
 ```
+
+## Analítica y simulación
+
+Cada partida genera una matriz NumPy, un reporte y cuatro gráficos en
+`resultados/ultima_partida/`. Para ejecutar una simulación reproducible:
+
+```bash
+python mundial_trivia/simulador.py --partidas 10 --semilla 42
+```
+
+La muestra de 10 partidas es la utilizada por el informe y la presentación. Puedes
+cambiar `--partidas` para realizar experimentos adicionales.
+
+## Pruebas
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+## Informe APA 7
+
+El informe se compila exclusivamente con Docker:
+
+```bash
+docker compose run --rm latex
+docker compose run --rm word
+```
+
+Los documentos se crean en `entregables/`. Consulta `docs/informe/README.md`
+para el flujo completo.
 
 ---
 

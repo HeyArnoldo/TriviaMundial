@@ -8,31 +8,87 @@ from config import FASES, VIDAS_INICIALES, PREGUNTAS_POR_FASE
 from preguntas import cargar_preguntas
 
 
+def validar_nombre(nombre):
+    """Normaliza y valida el nombre ingresado por el jugador."""
+    if not isinstance(nombre, str):
+        raise ValueError("El nombre debe ser un texto.")
+
+    nombre_limpio = " ".join(nombre.split())
+    if len(nombre_limpio) < 2:
+        raise ValueError("Ingresa un nombre de al menos 2 caracteres.")
+    if len(nombre_limpio) > 40:
+        raise ValueError("El nombre no puede superar los 40 caracteres.")
+    if not all(caracter.isalpha() or caracter in " -'" for caracter in nombre_limpio):
+        raise ValueError("El nombre solo puede contener letras, espacios, guiones o apóstrofes.")
+    return nombre_limpio
+
+
+def validar_banco_preguntas(lista):
+    """Verifica la estructura y consistencia del banco de preguntas."""
+    if not isinstance(lista, list) or not lista:
+        raise ValueError("El banco de preguntas debe ser una lista no vacía.")
+
+    campos = ("id", "categoria", "dificultad", "pregunta", "imagen", "opciones", "correcta")
+    dificultades = ("facil", "medio", "dificil")
+    identificadores = set()
+
+    for posicion, pregunta in enumerate(lista, start=1):
+        if not isinstance(pregunta, dict):
+            raise ValueError(f"La pregunta {posicion} debe ser un diccionario.")
+        faltantes = [campo for campo in campos if campo not in pregunta]
+        if faltantes:
+            raise ValueError(
+                f"La pregunta {posicion} no contiene: {', '.join(faltantes)}."
+            )
+        if pregunta["id"] in identificadores:
+            raise ValueError(f"El id {pregunta['id']} está repetido.")
+        identificadores.add(pregunta["id"])
+        if pregunta["dificultad"] not in dificultades:
+            raise ValueError(f"Dificultad inválida en la pregunta {pregunta['id']}.")
+        if not isinstance(pregunta["opciones"], tuple) or len(pregunta["opciones"]) != 4:
+            raise ValueError(
+                f"La pregunta {pregunta['id']} debe tener 4 opciones en una tupla."
+            )
+        if not isinstance(pregunta["correcta"], int) or not 0 <= pregunta["correcta"] < 4:
+            raise ValueError(f"Respuesta correcta inválida en la pregunta {pregunta['id']}.")
+        if not isinstance(pregunta["pregunta"], str) or not pregunta["pregunta"].strip():
+            raise ValueError(f"El enunciado de la pregunta {pregunta['id']} está vacío.")
+
+    return True
+
+
 def nuevo_estado(nombre_jugador):
     """Crea el estado inicial del juego para un jugador."""
     return {
-        "jugador": nombre_jugador,
+        "jugador": validar_nombre(nombre_jugador),
         "puntaje": 0,
         "vidas": VIDAS_INICIALES,
         "fase_actual": 0,                # indice dentro de FASES
         "preguntas_jugadas": [],         # ids ya usados, para no repetir
+        "historial_respuestas": [],       # datos para NumPy y gráficos
         "ranking_sesion": [],            # tuplas (nombre, puntaje) de la sesion
     }
 
 
-def seleccionar_preguntas(lista, dificultad, n=PREGUNTAS_POR_FASE, excluir=None):
+def seleccionar_preguntas(
+        lista, dificultad, n=PREGUNTAS_POR_FASE, excluir=None, rng=None):
     """Filtra preguntas por dificultad (excluyendo ids ya jugados)
     y devuelve n preguntas aleatorias sin repetir."""
+    if not isinstance(n, int) or n <= 0:
+        raise ValueError("La cantidad de preguntas debe ser un entero positivo.")
     if excluir is None:
         excluir = []
+    selector = rng or random
     disponibles = [p for p in lista
-                   if p["dificultad"] == dificultad and p["id"] not in excluir]
+                    if p["dificultad"] == dificultad and p["id"] not in excluir]
     # Si no alcanzan de esa dificultad, completar con cualquier otra no jugada
     if len(disponibles) < n:
         extras = [p for p in lista
                   if p["id"] not in excluir and p not in disponibles]
         disponibles += extras
-    return random.sample(disponibles, min(n, len(disponibles)))
+    if len(disponibles) < n:
+        raise ValueError("No hay suficientes preguntas disponibles para completar la fase.")
+    return selector.sample(disponibles, n)
 
 
 def validar_respuesta(pregunta, indice_elegido):
@@ -42,15 +98,38 @@ def validar_respuesta(pregunta, indice_elegido):
 
 def actualizar_puntaje(estado, acierto, puntos_fase):
     """Suma puntos si acerto, resta una vida si fallo. Muta el estado."""
+    if not isinstance(acierto, bool):
+        raise ValueError("El resultado de la respuesta debe ser verdadero o falso.")
+    if not isinstance(puntos_fase, int) or puntos_fase < 0:
+        raise ValueError("Los puntos de la fase deben ser un entero no negativo.")
     if acierto:
         estado["puntaje"] += puntos_fase
     else:
         estado["vidas"] -= 1
 
 
-def registrar_pregunta(estado, pregunta):
-    """Marca una pregunta como jugada para no repetirla."""
+def registrar_respuesta(estado, pregunta, fase, acierto, tiempo_respuesta=0.0):
+    """Registra una respuesta y los datos necesarios para el análisis."""
+    if pregunta["id"] in estado["preguntas_jugadas"]:
+        raise ValueError(f"La pregunta {pregunta['id']} ya fue respondida.")
+    if tiempo_respuesta < 0:
+        raise ValueError("El tiempo de respuesta no puede ser negativo.")
+
     estado["preguntas_jugadas"].append(pregunta["id"])
+    estado["historial_respuestas"].append({
+        "numero": len(estado["historial_respuestas"]) + 1,
+        "jugador": estado["jugador"],
+        "pregunta_id": pregunta["id"],
+        "fase_indice": estado["fase_actual"],
+        "fase": fase["nombre"],
+        "categoria": pregunta["categoria"],
+        "dificultad": pregunta["dificultad"],
+        "acierto": acierto,
+        "puntos_obtenidos": fase["puntos"] if acierto else 0,
+        "puntaje_acumulado": estado["puntaje"],
+        "vidas_restantes": estado["vidas"],
+        "tiempo_respuesta": round(float(tiempo_respuesta), 2),
+    })
 
 
 def fase_terminada(estado, respondidas):
@@ -113,9 +192,9 @@ if __name__ == "__main__":
         print(f"\n== {fase['nombre']} ({len(preguntas)} preguntas) ==")
         respondidas = 0
         for p in preguntas:
-            registrar_pregunta(estado, p)
             acierto = random.choice([True, True, False])  # simula respuestas
             actualizar_puntaje(estado, acierto, fase["puntos"])
+            registrar_respuesta(estado, p, fase, acierto)
             respondidas += 1
             print(f"  P{p['id']}: {'OK' if acierto else 'X'} "
                   f"(vidas={estado['vidas']}, puntaje={estado['puntaje']})")

@@ -4,8 +4,10 @@
 # Mundial Trivia Challenge - UTP 2026
 
 import os
+import time
 import tkinter as tk
 
+import analitica
 import config
 import juego
 from preguntas import cargar_preguntas
@@ -28,11 +30,14 @@ class App:
         self.root.resizable(False, False)
 
         self.lista_trivia = cargar_preguntas()
+        juego.validar_banco_preguntas(self.lista_trivia)
         self.estado = None
         self.preguntas_fase = []     # preguntas de la fase en curso
         self.indice_pregunta = 0     # cual de las 5 va
         self.respondiendo = False    # bloquea doble click durante feedback
         self._imagen_actual = None   # referencia viva (tkinter la necesita)
+        self.inicio_pregunta = 0.0
+        self._tarea_siguiente = None
 
         self.pantalla_bienvenida()
 
@@ -111,7 +116,7 @@ class App:
 
         canvas.create_text(config.ANCHO // 2, 120, text="⚽ MUNDIAL ⚽",
                            font=config.FUENTE_TITULO, fill=config.COLOR_DORADO)
-        canvas.create_text(config.ANCHO // 2, 175, text="TRIVIA CHALLENGE",
+        canvas.create_text(config.ANCHO // 2, 175, text="PROYECTO FINAL UTP",
                            font=config.FUENTE_TITULO, fill=config.COLOR_TEXTO_CLARO)
         canvas.create_text(config.ANCHO // 2, 240,
                            text="5 fases · 3 vidas · 25 preguntas · ¿Llegarás al Salón de la Fama?",
@@ -129,9 +134,10 @@ class App:
                                    font=config.FUENTE_NORMAL, fill=config.COLOR_FALLO)
 
         def comenzar():
-            nombre = entry.get().strip()
-            if nombre == "":
-                canvas.itemconfig(aviso, text="⚠ Ingresa tu nombre para jugar")
+            try:
+                nombre = juego.validar_nombre(entry.get())
+            except ValueError as error:
+                canvas.itemconfig(aviso, text=f"⚠ {error}")
                 return
             if self.estado is None:
                 self.estado = juego.nuevo_estado(nombre)
@@ -228,6 +234,7 @@ class App:
             self.botones_opcion.append(btn)
         marco_opciones.columnconfigure(0, weight=1)
         marco_opciones.columnconfigure(1, weight=1)
+        self.inicio_pregunta = time.perf_counter()
 
     def responder(self, indice_elegido):
         """Valida la respuesta, pinta feedback verde/rojo y avanza."""
@@ -238,9 +245,11 @@ class App:
         pregunta = self.preguntas_fase[self.indice_pregunta]
         fase = juego.fase_actual(self.estado)
         acierto = juego.validar_respuesta(pregunta, indice_elegido)
+        tiempo_respuesta = time.perf_counter() - self.inicio_pregunta
 
-        juego.registrar_pregunta(self.estado, pregunta)
         juego.actualizar_puntaje(self.estado, acierto, fase["puntos"])
+        juego.registrar_respuesta(
+            self.estado, pregunta, fase, acierto, tiempo_respuesta)
 
         # feedback visual: verde la correcta, rojo la elegida si fallo
         for i, btn in enumerate(self.botones_opcion):
@@ -250,9 +259,11 @@ class App:
             elif i == indice_elegido:
                 btn.config(bg=config.COLOR_FALLO)
 
-        self.root.after(config.PAUSA_FEEDBACK, self.siguiente_pregunta)
+        self._tarea_siguiente = self.root.after(
+            config.PAUSA_FEEDBACK, self.siguiente_pregunta)
 
     def siguiente_pregunta(self):
+        self._tarea_siguiente = None
         self.indice_pregunta += 1
         if juego.fase_terminada(self.estado, self.indice_pregunta):
             self.terminar_fase()
@@ -294,6 +305,13 @@ class App:
         self.limpiar()
         canvas = self.fondo()
         resultado = juego.clasificar_resultado(self.estado)
+        self.estado["resultado"] = resultado
+        resumen = analitica.procesar_historial(self.estado["historial_respuestas"])
+        try:
+            analitica.generar_reporte_partida(self.estado)
+            mensaje_archivos = "Reporte y gráficos guardados en la carpeta resultados"
+        except OSError:
+            mensaje_archivos = "No se pudieron guardar los archivos de resultados"
 
         if resultado == "salon_fama":
             # confeti simple con ovalos de colores
@@ -321,14 +339,21 @@ class App:
                                fill=config.COLOR_TEXTO_CLARO)
 
         canvas.create_text(config.ANCHO // 2, 225,
-                           text=f"Puntaje final: ⭐ {self.estado['puntaje']}",
-                           font=config.FUENTE_SUBTITULO, fill=config.COLOR_DORADO)
+                            text=f"Puntaje final: ⭐ {self.estado['puntaje']}",
+                            font=config.FUENTE_SUBTITULO, fill=config.COLOR_DORADO)
+        canvas.create_text(
+            config.ANCHO // 2, 265,
+            text=f"Rendimiento: {resumen['clasificacion']} "
+                 f"({resumen['porcentaje_aciertos']:.1f}% de aciertos)",
+            font=config.FUENTE_HUD, fill=config.COLOR_TEXTO_CLARO)
+        canvas.create_text(config.ANCHO // 2, 292, text=mensaje_archivos,
+                           font=(config.FUENTE, 10), fill="#cbd5e1")
 
         # ranking de la sesion (tuplas nombre, puntaje)
-        canvas.create_text(config.ANCHO // 2, 285, text="— Ranking de la sesión —",
-                           font=config.FUENTE_HUD, fill="#cbd5e1")
+        canvas.create_text(config.ANCHO // 2, 320, text="— Ranking de la sesión —",
+                            font=config.FUENTE_HUD, fill="#cbd5e1")
         medallas = ("🥇", "🥈", "🥉")
-        y = 320
+        y = 350
         for pos, (nombre, puntaje) in enumerate(self.estado["ranking_sesion"][:5]):
             icono = medallas[pos] if pos < len(medallas) else f"{pos + 1}."
             canvas.create_text(config.ANCHO // 2, y,

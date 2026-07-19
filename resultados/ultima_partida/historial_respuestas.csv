@@ -1,0 +1,2 @@
+﻿numero,jugador,pregunta_id,fase_indice,fase,categoria,dificultad,acierto,puntos_obtenidos,puntaje_acumulado,vidas_restantes,tiempo_respuesta
+1,Equipo UTP,4,0,Fase de Grupos,jugadores,facil,False,0,0,2,0.54
